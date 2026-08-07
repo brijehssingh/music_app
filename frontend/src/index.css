@@ -1,2 +1,212 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f8fafc;
+  background: #08090d;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: #08090d;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 8% -10%, rgba(113, 72, 255, 0.18), transparent 33%),
+    radial-gradient(circle at 92% 10%, rgba(245, 86, 164, 0.1), transparent 28%),
+    #08090d;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.65);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08090d;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid #08090d;
+  border-radius: 999px;
+  background: #34313f;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+}
+
+.app-shell::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 52px 52px;
+  pointer-events: none;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 70%);
+}
+
+.page-container {
+  width: min(1180px, calc(100% - 32px));
+  margin-inline: auto;
+}
+
+.glass-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(20, 20, 27, 0.72);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(20px);
+}
+
+.eyebrow {
+  color: #b6a4ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.field {
+  width: 100%;
+  height: 3.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.9rem;
+  padding: 0 1rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.045);
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.field::placeholder {
+  color: #777483;
+}
+
+.field:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.field:focus {
+  border-color: rgba(167, 139, 250, 0.7);
+  outline: none;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+}
+
+.primary-button {
+  display: inline-flex;
+  min-height: 3.15rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 0;
+  border-radius: 0.9rem;
+  padding: 0.8rem 1.25rem;
+  color: #fff;
+  font-weight: 750;
+  background: linear-gradient(135deg, #7c5cff, #9b6dff 55%, #cf6bc5);
+  box-shadow: 0 12px 30px rgba(124, 92, 255, 0.25);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+  box-shadow: 0 16px 38px rgba(124, 92, 255, 0.34);
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.secondary-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.85rem;
+  padding: 0.65rem 1rem;
+  color: #f2f0f7;
+  font-weight: 650;
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.secondary-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.error-banner {
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  color: #fecdd3;
+  font-size: 0.9rem;
+  background: rgba(159, 18, 57, 0.15);
+}
+
+@keyframes soft-spin {
+  to { transform: rotate(360deg); }
+}
+
+.soft-spin {
+  animation: soft-spin 7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,361 +1,356 @@
-import userModel from "../models/user.js";
+import "dotenv/config";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import uploadFile from "../srevices/cloudinary.js";
+import mongoose from "mongoose";
+import userModel from "../models/user.js";
 import songModel from "../models/songs.js";
+import uploadFile from "../srevices/cloudinary.js";
+
+const isProduction = process.env.NODE_ENV === "production";
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: "/",
+};
+
+function createToken(user) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is missing");
+  }
+
+  return jwt.sign(
+    { user_id: user._id, user: user.user },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" },
+  );
+}
+
+function readToken(req) {
+  const token = req.cookies?.token;
+
+  if (!token) {
+    const error = new Error("Please log in first");
+    error.status = 401;
+    throw error;
+  }
+
+  return jwt.verify(token, process.env.JWT_SECRET);
+}
+
+function safeUser(user) {
+  return {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    user: user.user,
+  };
+}
+
+function sendControllerError(res, error, fallbackMessage) {
+  if (
+    error.status === 401 ||
+    error.name === "JsonWebTokenError" ||
+    error.name === "TokenExpiredError"
+  ) {
+    return res.status(401).json({ message: "Your session has expired. Please log in again." });
+  }
+
+  console.error(`${fallbackMessage}:`, error.message);
+  return res.status(error.status || 500).json({
+    message: error.status ? error.message : fallbackMessage,
+  });
+}
 
 export async function signup(req, res) {
-
   try {
+    const name = req.body.name?.trim();
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
+    const accountType = req.body.user === "premium" ? "premium" : "normal";
 
-    const { name, email, password, user } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email, and password are required" });
+    }
 
-    const find = await userModel.findOne({
-      $or: [{ email }, { name }]
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ message: "Enter a valid email address" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const existingUser = await userModel.findOne({
+      $or: [{ email }, { name }],
     });
 
-    if (find) {
-      return res.status(400).json({
-        message: "User already exists"
-      });
+    if (existingUser) {
+      return res.status(409).json({ message: "A user with this name or email already exists" });
     }
 
     const hash = await bcrypt.hash(password, 10);
-
     const newUser = await userModel.create({
       name,
       email,
       password: hash,
-      user
+      user: accountType,
     });
 
-    const token = jwt.sign(
-      { user_id: newUser._id, user: newUser.user },
-      process.env.JWT_SECRET
-    );
+    const token = createToken(newUser);
+    res.cookie("token", token, cookieOptions);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None"
+    return res.status(201).json({
+      message: "Account created successfully",
+      user: safeUser(newUser),
     });
-
-    res.status(201).json({
-      message: "User created",
-      user: newUser
-    });
-
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "This email is already registered" });
+    }
 
-    res.status(500).json({
-      message: "Server error"
-    });
-
+    return sendControllerError(res, error, "Account could not be created");
   }
-
-}
-export async function login(req,res){
-
-try {
-
-const {email , password} = req.body;
-
-const user = await userModel.findOne({email});
-
-if(!user){
-return res.status(400).json({message:"user not found"});
 }
 
-const match = await bcrypt.compare(password,user.password);
-
-if(!match){
-return res.status(400).json({message:"password not correct"});
-}
-
-const token = jwt.sign(
-{ user_id: user._id, user: user.user },
-process.env.JWT_SECRET
-);
-
-res.cookie("token", token , {
-httpOnly:true,
-secure:true,
-sameSite:"None"
-});
-
-res.status(200).json({
-message:"Login successful",
-user
-});
-
-} catch (error) {
-
-res.status(500).json({
-message:"server error"
-});
-
-}
-
-}
-
-export async function musicUpload(req,res){
-
-const token = req.cookies.token;
-
-if(!token){
-return res.status(401).json({message:"unauthorized"});
-}
-
-try {
-
-const decode = jwt.verify(token , process.env.JWT_SECRET);
-
-if(decode.user !== "premium"){
-return res.status(403).json({message:"you are not premium guy"});
-}
-
-const result = await uploadFile(
-req.file.buffer.toString("base64")
-);
-
-const music = await songModel.create({
-name: req.body.name,
-url: result.url,
-comment: req.body.comment,
-artist: decode.user_id
-});
-
-return res.status(200).json({
-message:"song uploaded",
-music
-});
-
-} catch (error) {
-
-  console.log("UPLOAD ERROR:", error); 
-  return res.status(500).json({
-    message: "upload failed",
-    error: error.message
-  });
-}
-
-
-
-}
-
-
-export async function deletemusic(req, res) {
-
+export async function login(req, res) {
   try {
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
 
-    const token = req.cookies.token;
-
-    if (!token) {
-      return res.status(401).json({ message: "first login" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const decode = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userModel.findOne({ email }).select("+password");
 
-    if (decode.user !== "premium") {
-      return res.status(403).json({ message: "you are not premium guy" });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const { id } = req.params;
+    const passwordMatches = await bcrypt.compare(password, user.password);
 
-    const song = await songModel.findById(id);
-
-    if (!song) {
-      return res.status(404).json({ message: "song not found" });
+    if (!passwordMatches) {
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // check song owner
-    if (song.artist.toString() !== decode.user_id) {
-      return res.status(403).json({ message: "you can delete only your songs" });
-    }
+    const token = createToken(user);
+    res.cookie("token", token, cookieOptions);
 
-    await songModel.findByIdAndDelete(id);
-
-    res.status(200).json({
-      message: "song deleted successfully"
+    return res.status(200).json({
+      message: "Login successful",
+      user: safeUser(user),
     });
-
   } catch (error) {
-
-    console.log(error);
-
-    res.status(500).json({
-      message: "delete failed",
-      error: error.message
-    });
-
+    return sendControllerError(res, error, "Login failed");
   }
-
-}
-
-export async function getMySongs(req, res) {
-
-  try {
-
-    const token = req.cookies.token;
-
-    if (!token) {
-      return res.status(401).json({ message: "first login" });
-    }
-
-    const decode = jwt.verify(token, process.env.JWT_SECRET);
-
-    const songs = await songModel.find({
-      artist: decode.user_id
-    });
-
-    res.status(200).json({
-      songs
-    });
-
-  } catch (error) {
-
-    console.log(error);
-
-    res.status(500).json({
-      message: "error fetching songs",
-      error: error.message
-    });
-
-  }
-
-}
-export async function allSong(req, res) {
-
-  try {
-
-    const songs = await songModel.find();
-
-    if (songs.length === 0) {
-      return res.status(404).json({
-        message: "there is no song"
-      });
-    }
-
-    res.status(200).json({
-      songs
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      message: error.message
-    });
-
-  }
-
 }
 
 export async function logout(req, res) {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
+  });
+}
+
+export async function musicUpload(req, res) {
   try {
+    const decoded = readToken(req);
 
-    res.clearCookie("token");   // remove token cookie
+    if (decoded.user !== "premium") {
+      return res.status(403).json({
+        message: "Only premium users can upload songs",
+      });
+    }
 
-    return res.status(200).json({
-      success: true,
-      message: "Logged out successfully"
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Please select an audio file",
+      });
+    }
+
+    const name = req.body.name?.trim();
+    const comment = req.body.comment?.trim() || "";
+
+    if (!name) {
+      return res.status(400).json({
+        message: "Song name is required",
+      });
+    }
+
+    console.log("Uploading audio:", {
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
     });
 
+    // Important: send raw Buffer, not a Base64 string.
+    const result = await uploadFile(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+    );
+
+    const music = await songModel.create({
+      name,
+      url: result.url,
+      mimeType: req.file.mimetype,
+      comment,
+      artist: decoded.user_id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Song uploaded successfully",
+      music,
+    });
   } catch (error) {
+    console.error("SONG UPLOAD ERROR:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Logout failed",
-      error: error.message
+      message:
+        process.env.NODE_ENV === "production"
+          ? "Song upload failed"
+          : error.message || "Song upload failed",
     });
   }
 }
+export async function deletemusic(req, res) {
+  try {
+    const decoded = readToken(req);
 
-export async function getArtists(req,res){
+    if (decoded.user !== "premium") {
+      return res.status(403).json({ message: "Only premium users can delete songs" });
+    }
 
-const artists = await songModel.aggregate([
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid song id" });
+    }
 
-{
-$lookup:{
-from:"users",
-localField:"artist",
-foreignField:"_id",
-as:"artist"
-}
-},
+    const song = await songModel.findById(req.params.id);
 
-{ $unwind:"$artist" },
+    if (!song) {
+      return res.status(404).json({ message: "Song not found" });
+    }
 
-{
-$group:{
-_id:"$artist._id",
-artistName:{ $first:"$artist.name" }
-}
-}
+    if (song.artist.toString() !== decoded.user_id) {
+      return res.status(403).json({ message: "You can delete only your own songs" });
+    }
 
-])
-
-res.json({artists})
-
-}
-
-export async function getArtistSongs(req,res){
-
-const {id} = req.params
-
-const songs = await songModel.find({artist:id})
-
-res.json({songs})
-
+    await song.deleteOne();
+    return res.status(200).json({ message: "Song deleted successfully" });
+  } catch (error) {
+    return sendControllerError(res, error, "Song could not be deleted");
+  }
 }
 
-export async function getCurrentUser(req,res){
+export async function getMySongs(req, res) {
+  try {
+    const decoded = readToken(req);
+    const songs = await songModel
+      .find({ artist: decoded.user_id })
+      .sort({ createdAt: -1 });
 
-try{
-
-const token = req.cookies.token
-
-if(!token){
-return res.status(401).json({message:"not logged in"})
+    return res.status(200).json({ songs });
+  } catch (error) {
+    return sendControllerError(res, error, "Your songs could not be loaded");
+  }
 }
 
-const decode = jwt.verify(token,process.env.JWT_SECRET)
-
-const user = await userModel.findById(decode.user_id).select("name email")
-
-res.json({user})
-
-}catch(error){
-
-res.status(500).json({message:error.message})
-
+export async function allSong(req, res) {
+  try {
+    const songs = await songModel.find().sort({ createdAt: -1 });
+    return res.status(200).json({ songs });
+  } catch (error) {
+    return sendControllerError(res, error, "Songs could not be loaded");
+  }
 }
 
+export async function getArtists(req, res) {
+  try {
+    const artists = await songModel.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "artist",
+          foreignField: "_id",
+          as: "artist",
+        },
+      },
+      { $unwind: "$artist" },
+      {
+        $group: {
+          _id: "$artist._id",
+          artistName: { $first: "$artist.name" },
+          songsCount: { $sum: 1 },
+        },
+      },
+      { $sort: { songsCount: -1, artistName: 1 } },
+    ]);
+
+    return res.status(200).json({ artists });
+  } catch (error) {
+    return sendControllerError(res, error, "Artists could not be loaded");
+  }
 }
 
-export async function searchSongs(req,res){
+export async function getArtistSongs(req, res) {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid artist id" });
+    }
 
-try{
+    const songs = await songModel
+      .find({ artist: req.params.id })
+      .sort({ createdAt: -1 });
 
-const { id } = req.params
-const { query } = req.query
-
-const songs = await songModel.find({
-
-artist: id,
-
-name: { $regex: query, $options: "i" }
-
-})
-
-res.status(200).json({
-songs
-})
-
-}catch(error){
-
-res.status(500).json({
-message:error.message
-})
-
+    return res.status(200).json({ songs });
+  } catch (error) {
+    return sendControllerError(res, error, "Artist songs could not be loaded");
+  }
 }
 
+export async function getCurrentUser(req, res) {
+  try {
+    const decoded = readToken(req);
+    const user = await userModel.findById(decoded.user_id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ user: safeUser(user) });
+  } catch (error) {
+    return sendControllerError(res, error, "User session could not be loaded");
+  }
+}
+
+export async function searchSongs(req, res) {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid artist id" });
+    }
+
+    const query = String(req.query.query || "").trim();
+    const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const songs = await songModel.find({
+      artist: req.params.id,
+      name: { $regex: safeQuery, $options: "i" },
+    });
+
+    return res.status(200).json({ songs });
+  } catch (error) {
+    return sendControllerError(res, error, "Search failed");
+  }
 }

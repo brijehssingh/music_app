@@ -1,15 +1,28 @@
+import "dotenv/config";
 import app from "./src/app.js";
-import dotenv from "dotenv";
 import db from "./src/db/dbconn.js";
 
-
-dotenv.config();
+const port = Number(process.env.PORT || process.env.port) || 3000;
 
 app.get("/", (req, res) => {
-  res.send("Music App Backend Running 🚀");
+  return res.status(200).json({
+    success: true,
+    message: "Music App Backend Running",
+  });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  db();
-  console.log("server running on port 3000");
-});
+async function startServer() {
+  try {
+    await db();
+
+    app.listen(port, () => {
+      console.log("NEW app.js loaded successfully");
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error("Server could not start:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();

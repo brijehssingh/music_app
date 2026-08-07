@@ -1,17 +1,15 @@
-import { log } from "console";
-import mongoose  from "mongoose";
+import mongoose from "mongoose";
 
+export default async function db() {
+  const connectionString =
+    process.env.MONGODB_URI || process.env.connection_string;
 
-  export default  async function db() {
-    try {
-        const conn = await mongoose.connect(process.env.connection_string);
-        console.log("connected");  
-    } catch (error) {
-        console.log("db not connected");
-        
-    }
+  if (!connectionString) {
+    throw new Error("MONGODB_URI is missing in the backend environment file");
+  }
+
+  await mongoose.connect(connectionString);
+  console.log("Database connected");
 }
 
 
-
- 
