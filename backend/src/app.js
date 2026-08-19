@@ -11,6 +11,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "https://music-app-jelm.vercel.app",
+  "https://music-app-orpin-iota.vercel.app",
 ];
 
 // CORS configuration
