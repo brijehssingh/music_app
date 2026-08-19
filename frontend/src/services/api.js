@@ -8,7 +8,7 @@ const API = axios.create({
   withCredentials: true,
 
   // Wait up to 2 minutes
-  timeout: 120000,
+  timeout: 120000000,
 });
 
 export default API;
