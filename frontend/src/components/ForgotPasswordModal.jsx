@@ -16,6 +16,7 @@ export default function ForgotPasswordModal({
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [countdown, setCountdown] = useState(0);
 
   const [prevInitialEmail, setPrevInitialEmail] = useState(initialEmail);
@@ -39,6 +40,7 @@ export default function ForgotPasswordModal({
   const handleSendOtp = async (e) => {
     e?.preventDefault();
     setError("");
+    setNotice("");
 
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
       setError("Please enter a valid email address.");
@@ -52,6 +54,9 @@ export default function ForgotPasswordModal({
     if (result.success) {
       setStep(2);
       setCountdown(60);
+      if (result.message && (result.message.includes("Render") || result.message.includes("SMTP"))) {
+        setNotice(result.message);
+      }
     } else {
       setError(result.message || "Could not send verification code.");
     }
@@ -214,6 +219,12 @@ export default function ForgotPasswordModal({
                 <div className="error-banner text-xs">
                   <span>⚠️</span>
                   <span>{error}</span>
+                </div>
+              )}
+
+              {notice && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-300">
+                  <span>ℹ️ {notice}</span>
                 </div>
               )}
 

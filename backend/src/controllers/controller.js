@@ -395,19 +395,23 @@ export async function forgotPassword(req, res) {
         otp,
         userName: user.name,
       });
+
+      return res.status(200).json({
+        success: true,
+        message: "Verification code sent to your email address",
+      });
     } catch (mailError) {
       console.error("[FORGOT-PASSWORD] Email delivery failed:", mailError.message);
-      return res.status(503).json({
-        success: false,
+      // On free cloud hosts (like Render), outbound SMTP ports are blocked.
+      // However, the OTP was successfully generated and saved to the database.
+      // We return success: true so the user is not trapped on step 1!
+      return res.status(200).json({
+        success: true,
+        smtpBlocked: true,
         message:
-          "Email server could not deliver the code (Free cloud hosts like Render block SMTP ports 587/465). Check backend server console for the active OTP.",
+          "Verification code generated in database! Note: Free cloud hosts (Render) block outgoing SMTP emails. Check your server logs or console for the OTP.",
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      message: "Verification code sent to your email address",
-    });
   } catch (error) {
     console.error("Forgot password error:", error);
     return sendControllerError(res, error, "Could not send verification email");
