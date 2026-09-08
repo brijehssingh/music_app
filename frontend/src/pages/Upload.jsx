@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MusicIcon, UploadIcon } from "../components/Icons";
+import { MusicIcon, SparklesIcon, UploadIcon } from "../components/Icons";
+import UpgradeModal from "../components/UpgradeModal";
 import { useAuthStore } from "../store/authStore";
 import { useSongStore } from "../store/songStore";
 
@@ -11,6 +12,7 @@ export default function Upload() {
   const [comment, setComment] = useState("");
   const [music, setMusic] = useState(null);
   const [success, setSuccess] = useState("");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const fileInput = useRef(null);
 
   const handleSubmit = async (event) => {
@@ -55,10 +57,23 @@ export default function Upload() {
       <div className="page-container grid min-h-[65vh] place-items-center py-12 text-center">
         <div className="glass-panel max-w-lg rounded-[1.75rem] p-8">
           <MusicIcon className="mx-auto h-9 w-9 text-fuchsia-300" />
-          <h1 className="mt-5 text-2xl font-black text-white">Premium access required</h1>
-          <p className="mt-3 text-sm leading-6 text-zinc-500">Song uploads are available to premium accounts. Your listener account can still explore and play every public track.</p>
-          <Link to="/" className="secondary-button mt-6">Explore artists</Link>
+          <h1 className="mt-5 text-2xl font-black text-white">Premium Artist Access Required</h1>
+          <p className="mt-3 text-sm leading-6 text-zinc-400">
+            Song uploads and creator tools are exclusive to Premium accounts. Upgrade today with a single one-time payment to unlock publishing your music.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={() => setUpgradeOpen(true)}
+              className="primary-button !rounded-xl !bg-gradient-to-r !from-amber-400 !via-fuchsia-500 !to-violet-600"
+            >
+              <SparklesIcon className="h-4 w-4" /> Unlock Premium for ₹99
+            </button>
+            <Link to="/" className="secondary-button !rounded-xl">Explore artists</Link>
+          </div>
         </div>
+
+        <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
       </div>
     );
   }

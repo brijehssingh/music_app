@@ -4,7 +4,8 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import userModel from "../models/user.js";
 import songModel from "../models/songs.js";
-import uploadFile from "../srevices/cloudinary.js";
+import uploadFile from "../services/cloudinary.js";
+import { sendOtpEmail } from "../services/mailService.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -69,7 +70,8 @@ export async function signup(req, res) {
     const name = req.body.name?.trim();
     const email = req.body.email?.trim().toLowerCase();
     const password = req.body.password;
-    const accountType = req.body.user === "premium" ? "premium" : "normal";
+    // New accounts register as standard listeners; premium is unlocked via payment gateway
+    const accountType = "normal";
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Name, email, and password are required" });
@@ -354,3 +356,142 @@ export async function searchSongs(req, res) {
     return sendControllerError(res, error, "Search failed");
   }
 }
+
+export async function forgotPassword(req, res) {
+  try {
+    const email = req.body.email?.trim().toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email address is required",
+      });
+    }
+
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No account found with this email address",
+      });
+    }
+
+    // Generate secure 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordExpires = expiresAt;
+    await user.save();
+
+    console.log("\n=======================================================");
+    console.log(`🔑 [AUTH OTP GENERATED] For: ${user.email} -> OTP: ${otp}`);
+    console.log("=======================================================\n");
+
+    await sendOtpEmail({
+      toEmail: user.email,
+      otp,
+      userName: user.name,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification code sent to your email address",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return sendControllerError(res, error, "Could not send verification email");
+  }
+}
+
+export async function resetPassword(req, res) {
+  try {
+    const email = req.body.email?.trim().toLowerCase();
+    const otp = String(req.body.otp || "").trim();
+    const newPassword = req.body.newPassword;
+
+    console.log(`[RESET PASSWORD ATTEMPT] Email: ${email}, OTP entered: ${otp}`);
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, verification OTP, and new password are required",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters",
+      });
+    }
+
+    const user = await userModel
+      .findOne({ email })
+      .select("+resetPasswordOtp +resetPasswordExpires");
+
+    if (!user || !user.resetPasswordOtp || !user.resetPasswordExpires) {
+      return res.status(400).json({
+        success: false,
+        message: "No active password reset request found. Please request a new code.",
+      });
+    }
+
+    if (new Date() > user.resetPasswordExpires) {
+      user.resetPasswordOtp = null;
+      user.resetPasswordExpires = null;
+      await user.save();
+
+      return res.status(400).json({
+        success: false,
+        message: "Verification code has expired. Please request a new one.",
+      });
+    }
+
+    const storedOtp = String(user.resetPasswordOtp).trim();
+    let isMatch = false;
+
+    // Support both plain text OTP and bcrypt hashed OTP
+    if (
+      storedOtp.startsWith("$2b$") ||
+      storedOtp.startsWith("$2a$") ||
+      storedOtp.startsWith("$2y$")
+    ) {
+      isMatch = await bcrypt.compare(otp, storedOtp);
+    } else {
+      isMatch = storedOtp === otp;
+    }
+
+    console.log(
+      `[RESET PASSWORD CHECK] Match: ${isMatch} (Entered: "${otp}", DB: "${storedOtp}")`
+    );
+
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code. Please check and try again.",
+      });
+    }
+
+    // Hash new password and clear reset fields
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordOtp = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    console.log(
+      `[RESET PASSWORD SUCCESS] Password successfully updated for ${email}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Password reset successful! You can now log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return sendControllerError(res, error, "Could not reset password");
+  }
+}
+

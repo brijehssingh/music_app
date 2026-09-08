@@ -32,6 +32,17 @@ const userSchema = new Schema({
     default: "normal",
   },
 
+  resetPasswordOtp: {
+    type: String,
+    select: false,
+    default: null,
+  },
+
+  resetPasswordExpires: {
+    type: Date,
+    select: false,
+    default: null,
+  },
 }, { timestamps: true });
 
 const userModel = mongoose.model("users", userSchema);

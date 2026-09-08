@@ -7,8 +7,10 @@ import {
   LibraryIcon,
   MenuIcon,
   MusicIcon,
+  SparklesIcon,
   UploadIcon,
 } from "./Icons";
+import UpgradeModal from "./UpgradeModal";
 
 const navClass = ({ isActive }) =>
   `flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
@@ -20,6 +22,7 @@ const navClass = ({ isActive }) =>
 export default function Navbar() {
   const { user, checkingAuth } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -57,6 +60,15 @@ export default function Navbar() {
             <div className="h-10 w-32 animate-pulse rounded-xl bg-white/5" />
           ) : user ? (
             <div className="flex items-center gap-3">
+              {user.user !== "premium" && (
+                <button
+                  type="button"
+                  onClick={() => setUpgradeOpen(true)}
+                  className="primary-button !min-h-9 !rounded-xl !px-3 !py-1 !text-xs !bg-gradient-to-r !from-amber-400 !via-fuchsia-500 !to-violet-600 shadow-md shadow-fuchsia-500/25"
+                >
+                  <SparklesIcon className="h-3.5 w-3.5" /> Go Premium
+                </button>
+              )}
               <div className="grid h-9 w-9 place-items-center rounded-full border border-violet-400/20 bg-violet-500/12 text-sm font-bold text-violet-200">
                 {user.name?.charAt(0).toUpperCase()}
               </div>
@@ -113,11 +125,25 @@ export default function Navbar() {
 
           <div className="mt-3 border-t border-white/6 pt-3">
             {user ? (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold text-zinc-200">{user.name}</span>
-                <Link to="/logout" className="secondary-button !min-h-9 !text-xs" onClick={closeMenu}>
-                  Log out
-                </Link>
+              <div>
+                {user.user !== "premium" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      setUpgradeOpen(true);
+                    }}
+                    className="primary-button mb-3 w-full !min-h-10 !text-xs !bg-gradient-to-r !from-amber-400 !via-fuchsia-500 !to-violet-600"
+                  >
+                    <SparklesIcon className="h-3.5 w-3.5" /> Unlock Premium Artist Access
+                  </button>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-zinc-200">{user.name}</span>
+                  <Link to="/logout" className="secondary-button !min-h-9 !text-xs" onClick={closeMenu}>
+                    Log out
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
@@ -128,6 +154,8 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      <UpgradeModal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     </header>
   );
 }

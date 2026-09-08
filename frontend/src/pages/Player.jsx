@@ -34,9 +34,11 @@ export default function Player() {
     }
   }, [location.state]);
 
-  useEffect(() => {
+  const [prevSongKey, setPrevSongKey] = useState(song?._id || song?.url);
+  if (prevSongKey !== (song?._id || song?.url)) {
+    setPrevSongKey(song?._id || song?.url);
     setAudioError("");
-  }, [song?._id, song?.url]);
+  }
 
   const handleAudioError = (event) => {
     const mediaError = event.currentTarget.error;

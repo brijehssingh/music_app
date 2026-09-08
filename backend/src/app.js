@@ -3,6 +3,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import route from "./auth/auth.js";
+import paymentRouter from "./auth/paymentRoutes.js";
 
 const app = express();
 
@@ -73,6 +74,10 @@ app.get("/api/health", (req, res) => {
 
 // Authentication and music routes
 app.use("/api/auth", route);
+
+// Payment routes for premium upgrades
+app.use("/api/payment", paymentRouter);
+app.use("/api/auth/payment", paymentRouter);
 
 // Route not found
 app.use((req, res) => {

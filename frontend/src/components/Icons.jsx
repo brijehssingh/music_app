@@ -134,3 +134,19 @@ export function ArrowIcon({ className = "" }) {
     </svg>
   );
 }
+
+export function CheckIcon({ className = "" }) {
+  return (
+    <svg {...baseProps} className={className}>
+      <path d="m4.5 12.75 6 6 9-13.5" />
+    </svg>
+  );
+}
+
+export function SparklesIcon({ className = "" }) {
+  return (
+    <svg {...baseProps} className={className}>
+      <path d="m12 3 1.912 5.885L20 10.5l-6.088 1.615L12 18l-1.912-5.885L4 10.5l6.088-1.615L12 3Z" />
+    </svg>
+  );
+}
