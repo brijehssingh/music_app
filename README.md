@@ -31,7 +31,7 @@ backendpractice/
 │   │   ├── controllers/
 │   │   ├── db/
 │   │   ├── models/
-│   │   └── srevices/
+│   │   └── services/
 │   ├── .env.example
 │   └── index.js
 └── frontend/

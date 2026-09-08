@@ -4,6 +4,7 @@ import multer from "multer";
 import {
   allSong,
   deletemusic,
+  forgotPassword,
   getArtists,
   getArtistSongs,
   getCurrentUser,
@@ -11,6 +12,7 @@ import {
   login,
   logout,
   musicUpload,
+  resetPassword,
   searchSongs,
   signup,
 } from "../controllers/controller.js";
@@ -50,6 +52,10 @@ const upload = multer({
 route.post("/signup", signup);
 
 route.post("/login", login);
+
+route.post("/forgot-password", forgotPassword);
+
+route.post("/reset-password", resetPassword);
 
 route.get("/logout", logout);
 

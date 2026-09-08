@@ -53,5 +53,37 @@ export const useAuthStore = create((set) => ({
     }
   },
 
+  forgotPassword: async (email) => {
+    try {
+      set({ loading: true, error: null });
+      const response = await API.post("/forgot-password", { email });
+      set({ loading: false });
+      return { success: true, message: response.data?.message };
+    } catch (error) {
+      const message = getErrorMessage(error, "Failed to send reset code");
+      set({ loading: false, error: message });
+      return { success: false, message };
+    }
+  },
+
+  resetPassword: async ({ email, otp, newPassword }) => {
+    try {
+      set({ loading: true, error: null });
+      const response = await API.post("/reset-password", {
+        email,
+        otp,
+        newPassword,
+      });
+      set({ loading: false });
+      return { success: true, message: response.data?.message };
+    } catch (error) {
+      const message = getErrorMessage(error, "Failed to reset password");
+      set({ loading: false, error: message });
+      return { success: false, message };
+    }
+  },
+
+  upgradeToPremium: (user) => set({ user }),
+
   clearError: () => set({ error: null }),
 }));
