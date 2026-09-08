@@ -389,11 +389,20 @@ export async function forgotPassword(req, res) {
     console.log(`🔑 [AUTH OTP GENERATED] For: ${user.email} -> OTP: ${otp}`);
     console.log("=======================================================\n");
 
-    await sendOtpEmail({
-      toEmail: user.email,
-      otp,
-      userName: user.name,
-    });
+    try {
+      await sendOtpEmail({
+        toEmail: user.email,
+        otp,
+        userName: user.name,
+      });
+    } catch (mailError) {
+      console.error("[FORGOT-PASSWORD] Email delivery failed:", mailError.message);
+      return res.status(503).json({
+        success: false,
+        message:
+          "Email server could not deliver the code (Free cloud hosts like Render block SMTP ports 587/465). Check backend server console for the active OTP.",
+      });
+    }
 
     return res.status(200).json({
       success: true,

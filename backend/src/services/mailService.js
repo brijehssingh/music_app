@@ -14,6 +14,9 @@ function getTransporter() {
   if (host === "smtp.gmail.com" || host.includes("gmail")) {
     return nodemailer.createTransport({
       service: "gmail",
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 8000,
       auth: {
         user,
         pass,
@@ -25,6 +28,9 @@ function getTransporter() {
     host,
     port,
     secure: port === 465,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
     auth: {
       user,
       pass,
