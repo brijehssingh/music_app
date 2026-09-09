@@ -57,12 +57,26 @@ Copy `.env.example` to `.env`, then add your MongoDB and ImageKit values:
 
 ```env
 PORT=3000
-CLIENT_ORIGIN=http://localhost:5173
-MONGODB_URI=your-mongodb-connection-string
-JWT_SECRET=your-long-random-secret
-IMAGEKIT_PRIVATE_KEY=your-imagekit-private-key
-IMAGEKIT_PUBLIC_KEY=your-imagekit-public-key
-IMAGEKIT_URL_ENDPOINT=your-imagekit-url-endpoint
+MONGODB_URI=your_mongodb_connection_string
+CLIENT_ORIGIN=http://localhost:5173,http://localhost:5174
+
+IMAGEKIT_PUBLIC_KEY=your_imagekit_public_key
+IMAGEKIT_PRIVATE_KEY=your_imagekit_private_key
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_endpoint
+JWT_SECRET=your_jwt_secret_key
+
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+PREMIUM_PLAN_PRICE=9900
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_gmail_app_password
+SMTP_FROM="Pulse Music <your_email@gmail.com>"
+
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM="Pulse Music <onboarding@resend.dev>"
 ```
 
 Start the backend:
